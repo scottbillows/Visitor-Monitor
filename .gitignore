@@ -1,0 +1,4 @@
+visitors.db
+__pycache__/
+*.pyc
+*.py[cod]
