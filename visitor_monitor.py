@@ -9,7 +9,9 @@ from datetime import datetime
 app = FastAPI(title="My Website Visitor Monitor")
 
 # Database setup
-conn = sqlite3.connect("visitors.db", check_same_thread=False)
+import os
+DB_PATH = "/app/visitors.db"  # Matches the mount path you just set
+conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 conn.execute("""
 CREATE TABLE IF NOT EXISTS visitors (
     id INTEGER PRIMARY KEY,
