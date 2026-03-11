@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS visitors (
 """)
 
 def enrich_ip(ip: str):
-    """Free company + location lookup (no API key needed)"""
     try:
         r = requests.get(
             f"http://ip-api.com/json/{ip}?fields=status,org,isp,asname,country,city",
@@ -39,26 +38,45 @@ def enrich_ip(ip: str):
         if data.get("status") == "success":
             company = data.get("org") or data.get("isp") or data.get("asname") or "Unknown"
             location = f"{data.get('city', 'Unknown')}, {data.get('country', '')}"
-            return company, location, json.dumps(data)
+            
+            # Simple domain guess from company name (improve later if needed)
+            domain = None
+            if company != "Unknown" and " " in company:
+                # e.g., "Microsoft Corporation" -> "microsoft.com"
+                words = company.lower().split()
+                domain = words[0] + ".com"  # naive, but works often
+            
+            return company, location, json.dumps(data), domain
     except:
         pass
-    return "Unknown", "Unknown", "{}"
+    return "Unknown", "Unknown", "{}", None
 
 @app.post("/track")
 async def track_visitor(request: Request):
     body = await request.json()
-    
     ip = body.get("ip") or request.client.host
     page = body.get("page", "Unknown")
     ua = body.get("user_agent", "")
 
-    company, location, extra = enrich_ip(ip)
+    company, location, extra, domain = enrich_ip(ip)  # now returns domain too
 
-    timestamp = datetime.now().isoformat()
+    emails = []
+    if domain and HUNTER_API_KEY:
+        try:
+            url = f"https://api.hunter.io/v2/domain-search?domain={urllib.parse.quote(domain)}&api_key={HUNTER_API_KEY}"
+            r = requests.get(url, timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("data", {}).get("emails"):
+                    emails = [e["value"] for e in data["data"]["emails"][:5]]  # top 5 emails
+        except Exception as e:
+            print(f"Hunter error: {e}")
+
+    timestamp = datetime.utcnow().isoformat()
     
     conn.execute(
-        "INSERT INTO visitors (timestamp, ip, page, user_agent, company, location, extra) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (timestamp, ip, page, ua, company, location, extra)
+        "INSERT INTO visitors (timestamp, ip, page, user_agent, company, location, extra, emails) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (timestamp, ip, page, ua, company, location, extra, json.dumps(emails))
     )
     conn.commit()
     
