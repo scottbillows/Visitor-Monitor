@@ -7,6 +7,7 @@ import sqlite3
 import requests
 import json
 from datetime import datetime
+HUNTER_API_KEY = os.getenv("HUNTER_API_KEY")
 
 app = FastAPI(title="My Website Visitor Monitor")
 
