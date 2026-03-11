@@ -85,8 +85,8 @@ async def track_visitor(request: Request):
 @app.get("/dashboard", response_class=HTMLResponse)
 async def show_dashboard():
     rows = conn.execute(
-        "SELECT timestamp, ip, page, company, location FROM visitors ORDER BY timestamp DESC LIMIT 100"
-    ).fetchall()
+    "SELECT timestamp, ip, page, company, location, emails FROM visitors ORDER BY timestamp DESC LIMIT 100"
+).fetchall()
     
     html = """
     <html><head><title>Visitor Monitor</title>
