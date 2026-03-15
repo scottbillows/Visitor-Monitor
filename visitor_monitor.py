@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS visitors (
     company TEXT,
     location TEXT,
     extra TEXT
+    emails TEXT
 )
 """)
 
